@@ -52,15 +52,16 @@ Acceptance checklist:
 - Valid organization-specific suffixes still reject exact matches.
 - Subdomains below those suffixes remain accepted.
 
-## 6. Signed format canonicalization review
+## 6. Multiple Cookie header combination design
 
-Add tests for noncanonical expiration fields, base64url spelling, empty payloads and malformed part boundaries. Propose whether strict canonical form should reject representations the current HMAC already makes unforgeable.
+RFC 6265bis notes that HTTP/2 and HTTP/3 clients or intermediaries can split Cookie headers. Research safe application-facing guidance or a small helper for combining multiple header instances before calling `parseCookieHeader`, with explicit duplicate handling.
 
 Acceptance checklist:
 
-- No secret-bearing fixture.
-- Every malformed form throws `CookieCageError` rather than a platform type error.
-- Document any intentional compatibility acceptance.
+- Cite the relevant RFC section in the issue or pull request.
+- Preserve duplicate rejection as the default.
+- Cover ordering, empty headers and comma-joining hazards.
+- Do not change the public API before maintainer approval in the issue.
 
 ## 7. TypeScript compile fixture
 

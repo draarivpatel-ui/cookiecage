@@ -11,7 +11,7 @@ Zero-dependency RFC 6265bis cookie serialization, parsing, prefix validation and
 - **Prototype-pollution defense.** Parsed objects use `Object.create(null)` and dangerous names are rejected.
 - **Rotation-ready signing.** Keyrings sign with the first key, verify with active retired keys, and report `rotated: true` when a non-primary key verifies.
 
-**Tests:** 576 passing with `npm test` (Node 18+).
+**Tests:** 588 passing with `npm test` (Node 18+).
 
 ## Install
 
@@ -84,7 +84,7 @@ Attributes serialize in deterministic order: `Domain`, `Path`, `Max-Age`, `Expir
 
 ### Prefix and attribute invariants
 
-The exact RFC prefix spellings are enforced:
+Prefix enforcement is ASCII case-insensitive, matching the RFC 6265bis user-agent storage requirements. Use the canonical `__Host-` and `__Secure-` spellings; mixed-case variants cannot bypass the invariants:
 
 - `__Host-` requires `Secure`, `Path=/` and no `Domain` attribute.
 - `__Secure-` requires `Secure`.
@@ -148,7 +148,9 @@ const cookies = parseCookieHeader('session=abc; theme=dark');
 cookies.session; // abc
 ```
 
-Quoted cookie values are unwrapped according to the RFC grammar. Percent escapes are preserved unless `decodeValues: true` is explicitly enabled. Decoding uses strict UTF-8 and rejects malformed input and decoded control characters.
+Balanced quoted cookie values are accepted, and the quote characters are preserved as part of the exact value. RFC 6265bis states that the quotes are not stripped, so `"abc"` and `abc` must never collapse into the same application value. Percent escapes inside or outside quotes are preserved unless `decodeValues: true` is explicitly enabled. Decoding uses strict UTF-8 and rejects malformed input and decoded control characters.
+
+ASCII spaces before a cookie pair are tolerated as transport whitespace, including multiple spaces after a semicolon. Tabs are rejected as control characters. Spaces after a value are not trimmed; they make the value invalid because spaces are outside the cookie-octet grammar.
 
 ### Cookie-tossing duplicate policy
 
@@ -191,6 +193,8 @@ The HMAC input binds all of the following:
 - the payload bytes.
 
 The payload is base64url encoded, not encrypted. Do not place secrets in a signed cookie unless they are encrypted by a separate appropriate mechanism.
+
+The v1 envelope is canonical. It rejects standard base64 `+` and `/` spellings, padding, noncanonical base64url trailing bits, noncanonical expiration fields, wrong-length tags and extra or missing parts.
 
 ### Keys
 

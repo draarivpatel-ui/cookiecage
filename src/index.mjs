@@ -42,6 +42,7 @@ const CONTROL_RE = /[\x00-\x1F\x7F-\x9F]/;
 const NON_ASCII_RE = /[^\x00-\x7F]/;
 const KEY_ID_RE = /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/;
 const BASE64URL_RE = /^[A-Za-z0-9_-]*$/;
+const BASE64URL_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
 const EXPIRY_RE = /^[0-9]{1,16}$/;
 const IPV4_SHAPE_RE = /^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$/;
 const DNS_LABEL_RE = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$/;
@@ -205,6 +206,10 @@ function validateCookieName(name, field = 'name') {
     fail(CODE.PROTOTYPE_KEY, 'cookie name is a reserved prototype key', { field });
   }
   return name;
+}
+
+function asciiStartsWithIgnoreCase(value, prefix) {
+  return value.length >= prefix.length && value.slice(0, prefix.length).toLowerCase() === prefix;
 }
 
 function validatePercentEncoding(text, field) {
@@ -493,12 +498,12 @@ export function serializeCookie(name, value, inputOptions) {
   const expires = readExpires(options.expires);
   const encodedValue = validateCookieValue(value, 'value', options);
 
-  if (name.startsWith('__Host-')) {
+  if (asciiStartsWithIgnoreCase(name, '__host-')) {
     if (!secureIsTrue(options.secure) || path !== '/' || domain !== undefined) {
       fail(CODE.PREFIX, '__Host- cookies require Secure, Path=/ and no Domain attribute', { field: 'name' });
     }
   }
-  if (name.startsWith('__Secure-') && !secureIsTrue(options.secure)) {
+  if (asciiStartsWithIgnoreCase(name, '__secure-') && !secureIsTrue(options.secure)) {
     fail(CODE.PREFIX, '__Secure- cookies require the Secure attribute', { field: 'name' });
   }
   if (options.sameSite === 'None' && !secureIsTrue(options.secure)) {
@@ -583,20 +588,23 @@ function parseOptions(input) {
 }
 
 function parseCookieValue(rawValue, options) {
-  let value = rawValue;
-  if (value.startsWith('"') || value.endsWith('"')) {
-    if (value.length < 2 || !value.startsWith('"') || !value.endsWith('"')) {
+  let inner = rawValue;
+  let quoted = false;
+  if (rawValue.startsWith('"') || rawValue.endsWith('"')) {
+    if (rawValue.length < 2 || !rawValue.startsWith('"') || !rawValue.endsWith('"')) {
       fail(CODE.VALUE, 'cookie value has mismatched quotes', { field: 'value' });
     }
-    value = value.slice(1, -1);
+    quoted = true;
+    inner = rawValue.slice(1, -1);
   }
-  const validated = validateCookieValue(value, 'value', {
+  const validated = validateCookieValue(inner, 'value', {
     encodeValue: false,
     strictPercentEncoding: options.strictPercentEncoding || options.decodeValues,
     maxValueBytes: options.maxCookieBytes,
     asciiAlreadyValidated: true
   });
-  return options.decodeValues ? decodePercentEncoded(validated, 'value') : validated;
+  const value = options.decodeValues ? decodePercentEncoded(validated, 'value') : validated;
+  return quoted ? '"' + value + '"' : value;
 }
 
 export function parseCookieHeader(header, inputOptions) {
@@ -795,9 +803,17 @@ function encodeBase64Url(buffer) {
   return buffer.toString('base64url');
 }
 
+function isCanonicalBase64Url(text) {
+  if (!BASE64URL_RE.test(text) || text.length % 4 === 1) return false;
+  const remainder = text.length % 4;
+  if (remainder === 0) return true;
+  const lastBits = BASE64URL_ALPHABET.indexOf(text[text.length - 1]);
+  return remainder === 2 ? (lastBits & 0x0F) === 0 : (lastBits & 0x03) === 0;
+}
+
 function decodeBase64Url(text, field) {
-  if (!BASE64URL_RE.test(text) || text.length % 4 === 1) {
-    fail(CODE.ENCODING, field + ' is not valid unpadded base64url', { field });
+  if (!isCanonicalBase64Url(text)) {
+    fail(CODE.ENCODING, field + ' is not valid canonical unpadded base64url', { field });
   }
   return Buffer.from(text, 'base64url');
 }
@@ -889,8 +905,8 @@ function parseSignedValue(signedValue, options) {
   }
   const payload = parts[3];
   const macText = parts[4];
-  if (!BASE64URL_RE.test(payload) || payload.length % 4 === 1 || !BASE64URL_RE.test(macText) || macText.length % 4 === 1) {
-    fail(CODE.SIGNATURE, 'signed value contains malformed base64url data', { field: 'signedValue' });
+  if (!isCanonicalBase64Url(payload) || !isCanonicalBase64Url(macText)) {
+    fail(CODE.SIGNATURE, 'signed value contains malformed or noncanonical base64url data', { field: 'signedValue' });
   }
   const mac = decodeBase64Url(macText, 'signedValue');
   if (mac.length !== 32) {

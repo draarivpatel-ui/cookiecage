@@ -69,7 +69,12 @@ export declare class CookieCageError extends Error {
   };
 }
 
-export type SameSiteInput = 'Strict' | 'Lax' | 'None' | 'strict' | 'lax' | 'none';
+type CaseInsensitiveAscii<T extends string> =
+  T extends `${infer Head}${infer Tail}`
+    ? `${Uppercase<Head> | Lowercase<Head>}${CaseInsensitiveAscii<Tail>}`
+    : '';
+
+export type SameSiteInput = CaseInsensitiveAscii<'strict'> | CaseInsensitiveAscii<'lax'> | CaseInsensitiveAscii<'none'>;
 
 export interface SerializeCookieOptions {
   /** Canonical DNS host name. Leading dot is normalized away. Single-label and known public suffixes are rejected. */

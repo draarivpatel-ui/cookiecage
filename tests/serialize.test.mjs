@@ -251,12 +251,25 @@ test('deleteCookie enforces __Host- root path invariant', () => {
   throwsCode(() => deleteCookie('__Host-sid', { path: '/app' }), CODE.PREFIX);
 });
 
+test('deleteCookie enforces case-insensitive __Host- prefix invariants', () => {
+  for (const name of ['__host-sid', '__HOST-sid', '__hOsT-sid']) {
+    throwsCode(() => deleteCookie(name, { path: '/app' }), CODE.PREFIX);
+    throwsCode(() => deleteCookie(name, { domain: 'example.com' }), CODE.PREFIX);
+    assert.match(deleteCookie(name), new RegExp('^' + name + '=; Path=/; Max-Age=0'));
+  }
+});
+
 test('deleteCookie rejects domain for __Host- cookies', () => {
   throwsCode(() => deleteCookie('__Host-sid', { domain: 'example.com' }), CODE.PREFIX);
 });
 
 test('deleteCookie honors sameSite configuration', () => {
   assert.match(deleteCookie('sid', { sameSite: 'Strict' }), /SameSite=Strict$/);
+});
+
+test('deleteCookie preserves Partitioned Secure invariant', () => {
+  throwsCode(() => deleteCookie('sid', { partitioned: true, secure: false }), CODE.PARTITIONED);
+  assert.match(deleteCookie('sid', { partitioned: true }), /Secure; SameSite=Lax; Partitioned$/);
 });
 
 test('__Host- cookie valid with required invariants', () => {
@@ -274,9 +287,14 @@ for (const options of [
   });
 }
 
-test('lowercase __host- is not treated as the exact RFC prefix', () => {
-  assert.match(serializeCookie('__host-sid', 'x', { secure: false, path: '/app', domain: 'example.com' }), /^__host-sid=x;/);
-});
+for (const name of ['__host-sid', '__HOST-sid', '__hOsT-sid']) {
+  test('case-insensitive __Host- prefix invariant enforced for ' + name, () => {
+    throwsCode(() => serializeCookie(name, 'x', { secure: false }), CODE.PREFIX);
+    throwsCode(() => serializeCookie(name, 'x', { path: '/app' }), CODE.PREFIX);
+    throwsCode(() => serializeCookie(name, 'x', { domain: 'example.com' }), CODE.PREFIX);
+    assert.equal(serializeCookie(name, 'x'), name + '=x; Path=/; HttpOnly; Secure; SameSite=Lax');
+  });
+}
 
 test('__Secure- cookie valid with Secure', () => {
   assert.match(serializeCookie('__Secure-sid', 'x'), /^__Secure-sid=x; Path=\/; HttpOnly; Secure/);
@@ -286,12 +304,17 @@ test('__Secure- cookie rejects Secure false', () => {
   throwsCode(() => serializeCookie('__Secure-sid', 'x', { secure: false }), CODE.PREFIX);
 });
 
-test('lowercase __secure- is not treated as the exact RFC prefix', () => {
-  assert.match(serializeCookie('__secure-sid', 'x', { secure: false }), /^__secure-sid=x;/);
-});
+for (const name of ['__secure-sid', '__SECURE-sid', '__sEcUrE-sid']) {
+  test('case-insensitive __Secure- prefix invariant enforced for ' + name, () => {
+    throwsCode(() => serializeCookie(name, 'x', { secure: false }), CODE.PREFIX);
+    assert.match(serializeCookie(name, 'x'), new RegExp('^' + name + '=x; Path=/; HttpOnly; Secure'));
+  });
+}
 
-test('SameSite=None requires Secure', () => {
-  throwsCode(() => serializeCookie('sid', 'x', { sameSite: 'None', secure: false }), CODE.SAMESITE);
+test('SameSite=None requires Secure across ASCII case variants', () => {
+  for (const sameSite of ['None', 'none', 'NONE', 'nOnE']) {
+    throwsCode(() => serializeCookie('sid', 'x', { sameSite, secure: false }), CODE.SAMESITE);
+  }
 });
 
 test('SameSite=None succeeds with Secure', () => {

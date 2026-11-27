@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { createHmac } from 'node:crypto';
 import { esm as api, throwsCode, withProtoKey, SECRET, SECRET_ALT } from './helpers.mjs';
 
 const {
@@ -110,6 +111,12 @@ test('cross-cookie substitution is rejected even when values are identical', () 
   throwsCode(() => verifyCookieValue('b', signed, SECRET, { now: 1000 }), CODE.SIGNATURE);
 });
 
+test('MAC framing fields reject delimiter characters before signing or verification', () => {
+  throwsCode(() => signCookieValue('bad\nname', 'abc', SECRET), CODE.CRLF);
+  throwsCode(() => signCookieValue('sid', 'abc', keyring([{ id: 'bad\nid', secret: SECRET }])), CODE.KEYRING);
+  throwsCode(() => verifyCookieValue('sid', 'v1.k1.0.YWJj\n.x', SECRET), CODE.CRLF);
+});
+
 test('changing the embedded key id is rejected even for the same secret', () => {
   const ring = keyring([
     { id: 'k1', secret: SECRET },
@@ -205,6 +212,27 @@ test('base64url plus character in payload is rejected', () => {
 test('base64 padding in MAC is rejected', () => {
   const signed = signCookieValue('sid', 'abc', SECRET, { now: 1000 }) + '=';
   throwsCode(() => verifyCookieValue('sid', signed, SECRET), CODE.SIGNATURE);
+});
+
+test('noncanonical base64url MAC trailing bits are rejected', () => {
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+  const signed = signCookieValue('sid', 'abc', SECRET, { now: 1000 });
+  const parts = signed.split('.');
+  const mac = parts[4];
+  const lastIndex = alphabet.indexOf(mac.at(-1));
+  assert.equal(lastIndex % 4, 0, 'canonical HMAC fixture must end on a zero-padding-bits boundary');
+  parts[4] = mac.slice(0, -1) + alphabet[lastIndex + 1];
+  const error = throwsCode(() => verifyCookieValue('sid', parts.join('.'), SECRET, { now: 1000 }), CODE.SIGNATURE);
+  assert.match(error.reason, /base64url/);
+});
+
+test('noncanonical base64url payload trailing bits are rejected even with a valid MAC for that spelling', () => {
+  const payload = 'YR';
+  const input = 'cookiecage-v1\nsid\nk1\n0\n' + payload;
+  const mac = createHmac('sha256', SECRET).update(input, 'utf8').digest().toString('base64url');
+  const signed = 'v1.k1.0.' + payload + '.' + mac;
+  const error = throwsCode(() => verifyCookieValue('sid', signed, SECRET, { now: 1000 }), CODE.SIGNATURE);
+  assert.match(error.reason, /base64url/);
 });
 
 for (const input of [undefined, null, 1, {}, []]) {
