@@ -1,0 +1,58 @@
+{
+  "name": "cookiecage",
+  "version": "1.0.0",
+  "description": "Zero-dependency RFC 6265bis cookie serialization, parsing, prefix validation and constant-time signed cookie protection for Node.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/draarivpatel-ui/cookiecage.git"
+  },
+  "homepage": "https://github.com/draarivpatel-ui/cookiecage#readme",
+  "bugs": {
+    "url": "https://github.com/draarivpatel-ui/cookiecage/issues"
+  },
+  "type": "module",
+  "main": "./cjs/index.cjs",
+  "module": "./src/index.mjs",
+  "types": "./types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./types/index.d.ts",
+      "import": "./src/index.mjs",
+      "require": "./cjs/index.cjs"
+    }
+  },
+  "files": [
+    "src",
+    "cjs",
+    "types",
+    "README.md",
+    "SECURITY.md",
+    "CONTRIBUTING.md",
+    "GOOD_FIRST_ISSUES.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build:cjs": "node scripts/build-cjs.mjs",
+    "check:cjs": "node scripts/build-cjs.mjs --check",
+    "test": "node --test tests/*.test.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "security",
+    "cookies",
+    "rfc6265bis",
+    "samesite",
+    "host-prefix",
+    "secure-prefix",
+    "hmac",
+    "cookie-signing",
+    "cookie-tossing",
+    "zero-dependency"
+  ],
+  "license": "MIT",
+  "sideEffects": false,
+  "dependencies": {},
+  "devDependencies": {}
+}
