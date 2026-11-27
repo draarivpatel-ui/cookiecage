@@ -1,5 +1,7 @@
 # cookiecage
 
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/draarivpatel-ui/cookiecage/badge)](https://scorecard.dev/viewer/?uri=github.com/draarivpatel-ui/cookiecage)
+
 Zero-dependency RFC 6265bis cookie serialization, parsing, prefix validation and constant-time HMAC-signed cookie protection for Node.js.
 
 `cookiecage` is a small, auditable security library for applications that need strict cookie boundaries rather than permissive string concatenation. It serializes hardened `Set-Cookie` values, parses incoming `Cookie` request headers into a null-prototype object, enforces `__Host-`, `__Secure-`, `SameSite=None` and CHIPS `Partitioned` invariants, and signs cookie values with HMAC-SHA256 while binding the cookie name, key id and optional expiration into the authenticated data.
