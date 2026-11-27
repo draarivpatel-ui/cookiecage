@@ -11,7 +11,7 @@ Zero-dependency RFC 6265bis cookie serialization, parsing, prefix validation and
 - **Prototype-pollution defense.** Parsed objects use `Object.create(null)` and dangerous names are rejected.
 - **Rotation-ready signing.** Keyrings sign with the first key, verify with active retired keys, and report `rotated: true` when a non-primary key verifies.
 
-**Tests:** 570 passing with `npm test` (Node 18+).
+**Tests:** 576 passing with `npm test` (Node 18+).
 
 ## Install
 
@@ -118,6 +118,10 @@ The preferred secure design is host-only cookies with no `Domain` attribute. Whe
 
 The public suffix check is conservative and includes common multi-part suffixes such as `co.uk` and `com.au`. It is not a complete Public Suffix List implementation. Use `additionalPublicSuffixes` for organization-specific suffixes, and prefer host-only cookies whenever possible.
 
+### Path validation
+
+Paths must start with `/` and be RFC 6265 cookie-octet data. Spaces, commas, quotes, backslashes, semicolons, controls and non-ASCII characters are rejected; use percent encoding for characters outside the grammar.
+
 ### Max-Age and Expires
 
 `maxAge` must be a safe integer from 0 through 34560000 seconds (400 days). `NaN`, infinity, booleans, strings and fractional values are rejected.
@@ -203,7 +207,7 @@ const keyring = {
 
 The first key signs. Every active key may verify. If `key2025` verifies a value, the result has `keyId: 'key2025'` and `rotated: true`. Remove an old key from the keyring when its values should stop verifying. A keyring may contain at most 32 keys.
 
-`allowWeakKeysForTests: true` is an explicit test-only escape hatch. It is not a production compatibility setting.
+`allowWeakKeysForTests: true` is an explicit test-only escape hatch. It is not a production compatibility setting. In a configured guard, the escape is scoped to the operation options where it appears; sign-only test configuration does not make verification accept a weak key.
 
 ### Expiration
 

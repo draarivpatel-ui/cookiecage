@@ -24,6 +24,8 @@ npm pack --dry-run
 
 The suite covers serialization, parsing, signing, key rotation, the configured guard, hostile input, deterministic performance bounds, ESM/CJS parity, TypeScript declaration surface and repository hygiene. A change is not done until every test passes.
 
+Windows contributors should run the test command from Git Bash. The explicit `tests/*.test.mjs` glob is kept for the project packaging standard, CI invokes it with `shell: bash`, and Node 18 does not expand glob patterns itself when the Windows command shell passes the wildcard through literally.
+
 ## Project layout
 
 ```text

@@ -74,7 +74,7 @@ export type SameSiteInput = 'Strict' | 'Lax' | 'None' | 'strict' | 'lax' | 'none
 export interface SerializeCookieOptions {
   /** Canonical DNS host name. Leading dot is normalized away. Single-label and known public suffixes are rejected. */
   domain?: string;
-  /** Cookie path. Must start with `/` and must not contain semicolons, controls or non-ASCII characters. */
+  /** Cookie path. Must start with `/` and contain only RFC 6265 cookie-octet characters. */
   path?: string;
   /** Seconds, integer from 0 through 34560000 (400 days). */
   maxAge?: number;

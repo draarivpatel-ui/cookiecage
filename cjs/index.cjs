@@ -412,6 +412,9 @@ function validatePath(path, strictPercentEncoding) {
   if (path.includes(';')) {
     fail(CODE.PATH, 'path must not contain a semicolon', { field: 'path' });
   }
+  if (!COOKIE_OCTET_RE.test(path)) {
+    fail(CODE.PATH, 'path is not valid RFC 6265 cookie-octet data', { field: 'path' });
+  }
   if (strictPercentEncoding) validatePercentEncoding(path, 'path');
   return path;
 }
@@ -865,7 +868,6 @@ function parseSignedValue(signedValue, options) {
   if (typeof signedValue !== 'string') {
     fail(CODE.INVALID_INPUT, 'signedValue must be a string', { field: 'signedValue' });
   }
-  validateHeaderText(signedValue, 'signedValue');
   if (signedValue.length > options.maxSignedBytes) {
     fail(CODE.LIMIT_EXCEEDED, 'signed value exceeds the configured byte limit', {
       field: 'signedValue',
@@ -873,6 +875,7 @@ function parseSignedValue(signedValue, options) {
       actual: signedValue.length
     });
   }
+  validateHeaderText(signedValue, 'signedValue');
   const parts = signedValue.split('.');
   if (parts.length !== 5 || parts[0] !== 'v1') {
     fail(CODE.SIGNATURE, 'signed value does not use the cookiecage v1 format', { field: 'signedValue' });
@@ -988,7 +991,7 @@ function createCookieJarGuard(inputOptions) {
 
   function resolveKeyring(split, fallback, strengthOptions) {
     if (split.hasKey) return normalizeKeyring(split.keyOrKeyring, strengthOptions);
-    if (fallback !== null) return fallback;
+    if (fallback !== null) return normalizeKeyring(fallback, strengthOptions);
     fail(CODE.KEYRING, 'cookie jar guard has no keyOrKeyring configured');
   }
 

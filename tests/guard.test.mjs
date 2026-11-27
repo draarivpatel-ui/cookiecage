@@ -157,6 +157,25 @@ test('guard construction accepts test opt-out for a weak configured key', () => 
   assert.equal(typeof guard.sign, 'function');
 });
 
+test('guard verification does not inherit a sign-only weak key opt-out', () => {
+  const guard = createCookieJarGuard({
+    keyOrKeyring: 'x',
+    sign: { allowWeakKeysForTests: true, now: 1000 }
+  });
+  const signed = guard.sign('sid', 'abc');
+  throwsCode(() => guard.verify('sid', signed, { now: 1000 }), CODE.WEAK_KEY);
+  assert.equal(guard.verify('sid', signed, { now: 1000, allowWeakKeysForTests: true }).value, 'abc');
+});
+
+test('guard per-call strict sign options revalidate the configured key', () => {
+  const guard = createCookieJarGuard({
+    keyOrKeyring: 'x',
+    sign: { allowWeakKeysForTests: true, now: 1000 }
+  });
+  assert.equal(typeof guard.sign('sid', 'abc'), 'string');
+  throwsCode(() => guard.sign('sid', 'abc', { allowWeakKeysForTests: false }), CODE.WEAK_KEY);
+});
+
 test('guard rejects unknown top-level option', () => {
   throwsCode(() => createCookieJarGuard({ cookies: {} }), CODE.OPTIONS);
 });
