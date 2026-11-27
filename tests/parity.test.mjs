@@ -183,7 +183,7 @@ test('package manifest is zero dependency and points at the public repository', 
   assert.equal(pkg.name, 'cookiecage');
   assert.equal(pkg.version, '1.0.0');
   assert.deepEqual(pkg.dependencies, {});
-  assert.deepEqual(pkg.devDependencies, {});
+  assert.deepEqual(pkg.devDependencies, { 'fast-check': '4.10.3' });
   assert.equal(pkg.repository.url, 'git+https://github.com/draarivpatel-ui/cookiecage.git');
   assert.equal(pkg.homepage, 'https://github.com/draarivpatel-ui/cookiecage#readme');
   assert.equal(pkg.bugs.url, 'https://github.com/draarivpatel-ui/cookiecage/issues');

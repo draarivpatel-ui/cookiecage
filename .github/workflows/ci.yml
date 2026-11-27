@@ -25,9 +25,15 @@ jobs:
       - name: Verify deterministic CommonJS build
         shell: bash
         run: node scripts/build-cjs.mjs --check
+      - name: Install development dependencies
+        shell: bash
+        run: npm ci
       - name: Run deterministic test suite
         shell: bash
         run: node --test tests/*.test.mjs
+      - name: Run property-based fuzz tests
+        shell: bash
+        run: npm run test:fuzz
       - name: Audit package tarball
         shell: bash
         run: npm pack --dry-run
